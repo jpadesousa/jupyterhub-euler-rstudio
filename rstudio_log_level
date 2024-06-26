@@ -1,16 +1,34 @@
 #!/bin/bash
 
-# Script to set the log-level in RStudio's logging configuration file
-# The script will prompt the user to select a log-level from the following options:
-#   1) debug
-#   2) info
-#   3) warn
-#   4) error
-# If the user does not provide an input, the log-level will default to 'warn' (or other specified default value)
-# The script will update the log-level in the logging configuration file located at $HOME/.rstudio/logging.conf
-
-FILE="$HOME/.rstudio/logging.conf"
+# Optional variables
+LOGGING_FILE_DIR="$HOME/.rstudio/logging.conf"
 DEFAULT_LOG_LEVEL="warn"
+
+# --------------------------------------------------------- #
+# Function to display help information
+display_help() {
+    echo
+    echo "Usage: $0 [OPTION]"
+    echo
+    echo "Set the log-level in RStudio's logging configuration file."
+    echo
+    echo "Options:"
+    echo "  -h, --help    Display this help message and exit."
+    echo
+    echo "Without any options, the script will prompt the user to select a log-level"
+    echo "from the following options: debug, info, warn, error."
+    echo "If the user does not provide an input, the log-level will default to '$DEFAULT_LOG_LEVEL'."
+    echo "The script updates the log-level in the logging configuration file located at"
+    echo "$LOGGING_FILE_DIR."
+    echo
+    exit 0
+}
+
+# Check for `-h` or `--help` argument
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    display_help
+fi
+# --------------------------------------------------------- #
 
 # Function to print messages in color
 print_color_same_line() {
@@ -36,9 +54,9 @@ echo
 # Condition 1 - Check if the logging configuration file exists
 ##############################################################
 
-if [ ! -f "$FILE" ]; then
+if [ ! -f "$LOGGING_FILE_DIR" ]; then
     print_color_same_line "   " 97
-    print_color_same_line "$FILE" 96
+    print_color_same_line "$LOGGING_FILE_DIR" 96
     print_color_same_line " does not exist." 95
     print_color_same_line " No action taken." 96
     print_color_same_line "\n" 97
@@ -51,18 +69,18 @@ fi
 ##############################################################
 
 # If log-level entry is not found, add it with the default value
-if ! grep -q "^log-level[ =]*.*" "$FILE"; then
+if ! grep -q "^log-level[ =]*.*" "$LOGGING_FILE_DIR"; then
     print_color_same_line "   " 97
     print_color_same_line "log-level entry not found. Adding 'log-level=" 36
     print_color_same_line $DEFAULT_LOG_LEVEL 33
     print_color_same_line "' as default." 36
     print_color_same_line "\n" 97
     echo
-    echo "log-level=$DEFAULT_LOG_LEVEL" >> "$FILE"
+    echo "log-level=$DEFAULT_LOG_LEVEL" >> "$LOGGING_FILE_DIR"
     print_color_same_line "   " 97
     print_color_same_line "log-level set to " 96
     print_color_same_line "$DEFAULT_LOG_LEVEL" 33
-    print_color_same_line " in $FILE" 96
+    print_color_same_line " in $LOGGING_FILE_DIR" 96
     print_color_same_line "\n" 97
     echo
     exit 1
@@ -73,7 +91,7 @@ fi
 ##############################################################
 
 # Extract the current log level
-current_log_level=$(awk -F"[[:space:]]*=[[:space:]]*" '/log-level[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$FILE")
+current_log_level=$(awk -F"[[:space:]]*=[[:space:]]*" '/log-level[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$LOGGING_FILE_DIR")
 
 # Print the current level
 print_color_same_line "   " 97
@@ -92,11 +110,15 @@ print_color_same_line $DEFAULT_LOG_LEVEL 33
 print_color_same_line "): " 36
 echo
 
-# Define options with colors
+# Define options
 options=("debug" "info" "warn" "error")
-colored_options=("\033[33mdebug\033[0m" "\033[33minfo\033[0m" "\033[33mwarn\033[0m" "\033[33merror\033[0m")
+colored_options=()
 
-# Display options with colors
+for option in "${options[@]}"; do
+    colored_options+=("\033[33m${option}\033[0m")
+done
+
+# Display options
 for i in "${!options[@]}"; do
     print_color_same_line "   " 97
     echo -e "$((i+1))) ${colored_options[$i]}"
@@ -125,12 +147,12 @@ done
 # Replace the log-level in the file
 new_log_level=${new_log_level:-$DEFAULT_LOG_LEVEL}
 SED_COMMAND="s/^log-level[ =]*.*/log-level=$new_log_level/"
-eval "sed $SED_EXT '$SED_COMMAND' \"$FILE\""
+eval "sed $SED_EXT '$SED_COMMAND' \"$LOGGING_FILE_DIR\""
 print_color_same_line "\n" 97
 print_color_same_line "   " 97
 print_color_same_line "log-level set to " 96
 print_color_same_line "$new_log_level" 33
-print_color_same_line " in $FILE" 96
+print_color_same_line " in $LOGGING_FILE_DIR" 96
 print_color_same_line "\n" 97
 echo
 
