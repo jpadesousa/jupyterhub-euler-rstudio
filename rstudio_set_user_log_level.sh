@@ -17,10 +17,11 @@ print_color_same_line() {
     echo -ne "\033[${2}m${1}\033[0m"
 }
 
-# Determine OS and set sed in-place extension accordingly
-SED_EXT='-i'
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    SED_EXT='-i""'
+# Check if running on macOS and adjust SED_EXT
+if [[ "$(uname)" == "Darwin" ]]; then
+    SED_EXT="-i ''" # macOS requires an empty string argument with -i
+else
+    SED_EXT="-i" # Linux and others
 fi
 
 # Print log-level information
@@ -50,7 +51,7 @@ fi
 ##############################################################
 
 # If log-level entry is not found, add it with the default value
-if ! grep -q "log-level=" "$FILE"; then
+if ! grep -q "^log-level[ =]*.*" "$FILE"; then
     print_color_same_line "   " 97
     print_color_same_line "log-level entry not found. Adding 'log-level=" 36
     print_color_same_line $DEFAULT_LOG_LEVEL 33
@@ -72,7 +73,7 @@ fi
 ##############################################################
 
 # Extract the current log level
-current_log_level=$(grep "log-level=" "$FILE" | cut -d'=' -f2)
+current_log_level=$(awk -F"[[:space:]]*=[[:space:]]*" '/log-level[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$FILE")
 
 # Print the current level
 print_color_same_line "   " 97
@@ -111,7 +112,7 @@ while true; do
     if [[ -z "$selection" ]]; then
         new_log_level=$DEFAULT_LOG_LEVEL
         break
-    elif (( selection >= 1 && selection <= ${#options[@]} )); then
+    elif [[ "$selection" =~ ^[0-9]+$ ]] && (( selection >= 1 && selection <= ${#options[@]} )); then
         new_log_level="${options[$((selection-1))]}"
         break
     else
@@ -121,9 +122,10 @@ while true; do
     fi
 done
 
-# Ensure new_log_level is not empty
+# Replace the log-level in the file
 new_log_level=${new_log_level:-$DEFAULT_LOG_LEVEL}
-eval sed $SED_EXT "s/log-level=$current_log_level/log-level=$new_log_level/" "$FILE"
+SED_COMMAND="s/^log-level[ =]*.*/log-level=$new_log_level/"
+eval "sed $SED_EXT '$SED_COMMAND' \"$FILE\""
 print_color_same_line "\n" 97
 print_color_same_line "   " 97
 print_color_same_line "log-level set to " 96
