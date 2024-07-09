@@ -323,13 +323,6 @@ sleep 1
 # R_LIBS_USER
 #-------------------------------------------------------------
 
-# If new_rstudio_image contains 'rocker'
-if [[ "$new_rstudio_image" == *"rocker"* ]]; then
-    R_LIBS_USER="$R_LIBS_USER_BASE/rocker/$new_rstudio_tag"
-else
-    R_LIBS_USER="$R_LIBS_USER_BASE/$new_rstudio_tag"
-fi
-
 # Print the variable information
 print_color_same_line "\n" 97
 print_color_same_line "(3/5) " 97
@@ -532,6 +525,29 @@ new_rstudio_extra_params=${new_rstudio_extra_params:-$RSTUDIO_EXTRA_PARAMS}
 AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_EXTRA_PARAMS[ =]*/ {print \"export RSTUDIO_EXTRA_PARAMS=\\\"$new_rstudio_extra_params\\\"\"; found=1; next} {print} END{if(!found) print \"export RSTUDIO_EXTRA_PARAMS=\\\"$new_rstudio_extra_params\\\"\"}"
 awk -v new_rstudio_extra_params="$new_rstudio_extra_params" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
 print_color_same_line "\n" 97
+
+# Check if the directory exists and create it if it does not
+if [[ ! -d "$R_LIBS_USER" ]]; then
+    mkdir -p "$R_LIBS_USER"
+    if [ $? -eq 0 ]; then
+        # Sucessful
+        print_color_same_line "   " 97
+        print_color_same_line "✓ " 32
+        print_color_same_line "The directory " 92
+        print_color_same_line "$R_LIBS_USER" 33
+        print_color_same_line " was created successfully!" 92
+        print_color_same_line "\n" 97
+        echo
+    else
+        # Failed
+        print_color_same_line "   " 97
+        print_color_same_line "✘ " 31
+        print_color_same_line "Failed to create the directory." 95
+        print_color_same_line "\n" 97
+        echo
+        exit 1
+    fi
+fi
 
 # Print the updated variables
 grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER|RSTUDIO_EXTRA_PARAMS' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
