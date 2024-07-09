@@ -9,6 +9,10 @@
 <img src="assets/eth_logo.png" alt="ETH Zurich logo" title="ETH Zurich logo" width="150" style="vertical-align: top;">
 <div/>
 
+<div>
+&nbsp;
+<div/>
+
 This repository contains scripts and configurations designed to customize RStudio within a JupyterHub environment hosted on the Euler computing infrastructure at ETH Zürich. The primary goal is to equip users with CLI tools that enable them to modify the default configuration of RStudio to better suit their project needs.
 
 For instance, users can select a specific RStudio container and the R version that aligns with their project requirements.
