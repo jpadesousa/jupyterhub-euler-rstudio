@@ -1,16 +1,36 @@
 #!/bin/bash
 
-# Optional variables
-RSTUDIO_CONFIG_FILE_DIR="./.config_r_studio"
-RSTUDIO_IMAGE="josousa/rocker_rstudio_extended"
-RSTUDIO_TAG="4.4.0"
-R_LIBS_USER="/cluster/work/nme/software/libraries/R/rocker/$RSTUDIO_TAG"
-RSTUDIO_EXTRA_PARAMS=""
-RSTUDIO_SINGULARITY_EXTRA_PARAMS="--bind /nfs/nas12.ethz.ch/fs1201/green_groups_nme_public:/nfs/nas12.ethz.ch/fs1201/green_groups_nme_public"
+# Source the environmental variables
+source rstudio_config.env
 
-# Variable options
-RSTUDIO_IMAGE_OPTIONS=("josousa/rocker_rstudio_extended" "rocker/rstudio" "rocker/verse" "rocker/tidyverse" "rocker/geospatial" "rocker/shiny" "rocker/shiny-verse")
-RSTUDIO_TAG_OPTIONS=("4.4.0" "4.3.3" "4.2.2")
+# --------------------------------------------------------- #
+# Function to display help information
+display_help() {
+    echo
+    echo "Usage: $0 [OPTION]"
+    echo
+    echo "Set the RStudio configuration variables in the configuration file."
+    echo
+    echo "Options:"
+    echo "  -h, --help    Display this help message and exit."
+    echo
+    echo "Without any options, the script will prompt the user to select the following variables:"
+    echo "  - RSTUDIO_IMAGE"
+    echo "  - RSTUDIO_TAG"
+    echo "  - R_LIBS_USER"
+    echo "  - RSTUDIO_EXTRA_PARAMS"
+    echo "  - RSTUDIO_SINGULARITY_EXTRA_PARAMS"
+    echo
+    echo "If the user does not provide an input, the variables will default to the values specified in the script."
+    echo "The script updates the variables in the configuration file located at $RSTUDIO_CONFIG_FILE_DIR."
+    echo
+    exit 0
+}
+# Check for `-h` or `--help` argument
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    display_help
+fi
+# --------------------------------------------------------- #
 
 # Function to print messages in color
 print_color_same_line() {
@@ -26,8 +46,13 @@ fi
 
 ##############################################################
 # Step 1 - Check if the RStudio config file exists
-# If the file does not exist, create a new file
+#          If the file does not exist, create a new file
 ##############################################################
+
+# Print the header
+print_color_same_line "\n" 97
+print_color_same_line "RStudio Configuration for Jupyterhub" 95
+echo
 
 # Print that we are checking if the file exists
 print_color_same_line "\n" 97
@@ -44,6 +69,7 @@ echo
 
 if [ ! -f "$RSTUDIO_CONFIG_FILE_DIR" ]; then
 
+    # Print that the file does not exist
     print_color_same_line "   " 97
     print_color_same_line "$RSTUDIO_CONFIG_FILE_DIR" 96
     print_color_same_line " does not exist." 95
@@ -53,15 +79,18 @@ if [ ! -f "$RSTUDIO_CONFIG_FILE_DIR" ]; then
     print_color_same_line "$RSTUDIO_CONFIG_FILE_DIR" 33
     print_color_same_line "\n" 97
     echo
-    # Create the file
+
+    # Create a new file
     touch "$RSTUDIO_CONFIG_FILE_DIR"
     if [ $? -eq 0 ]; then
+        # Sucessful
         print_color_same_line "   " 97
         print_color_same_line "✓ " 32
         print_color_same_line "The file was created successfully!" 92
         print_color_same_line "\n" 97
         echo
     else
+        # Failed
         print_color_same_line "   " 97
         print_color_same_line "✘ " 31
         print_color_same_line "Failed to create the file." 95
@@ -70,12 +99,14 @@ if [ ! -f "$RSTUDIO_CONFIG_FILE_DIR" ]; then
         exit 1
     fi
 else
+    # Print that the file already exists
     print_color_same_line "   " 97
     print_color_same_line "✓ " 32
     print_color_same_line "$RSTUDIO_CONFIG_FILE_DIR" 33
     print_color_same_line " already exists." 92
     print_color_same_line "\n" 97
     echo
+    # Print the contents of the file
     cat "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
         print_color_same_line "   " 97
         print_color_same_line "$line" 90
@@ -85,20 +116,22 @@ fi
 sleep 1
 
 ##############################################################
-# Step 2 - Add variables to the RStudio config file
+# Step 2 - Change the variables in the RStudio config file
 ##############################################################
 print_color_same_line "\n" 97
 print_color_same_line "• " 97
-print_color_same_line "Adding variables to the file:" 94
+print_color_same_line "Changing variables in the configuration file:" 94
 print_color_same_line "\n" 97
 echo
 sleep 1
+
 
 # RSTUDIO_IMAGE
 #-------------------------------------------------------------
 
 # Print the variable information
-print_color_same_line ">> " 97
+print_color_same_line "\n" 97
+print_color_same_line "(1/5) " 97
 print_color_same_line "RSTUDIO_IMAGE" 32
 print_color_same_line " is the name of the Rocker Project docker image available in the Docker Hub." 37
 print_color_same_line "\n" 97
@@ -162,6 +195,7 @@ while true; do
         break
     fi
 
+    # Check if the input is a valid number
     if [[ "$selection" =~ ^[0-9]+$ ]] && (( selection >= 1 && selection <= ${#RSTUDIO_IMAGE_OPTIONS[@]} )); then
         new_rstudio_image="${RSTUDIO_IMAGE_OPTIONS[$((selection-1))]}"
         break
@@ -177,15 +211,8 @@ new_rstudio_image=${new_rstudio_image:-$RSTUDIO_IMAGE}
 AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_IMAGE[ =]*/ {print \"export RSTUDIO_IMAGE=$new_rstudio_image\"; found=1; next} {print} END{if(!found) print \"export RSTUDIO_IMAGE=$new_rstudio_image\"}"
 awk -v new_rstudio_image="$new_rstudio_image" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
 print_color_same_line "\n" 97
-# print_color_same_line "   " 97
-# print_color_same_line "✓ " 32
-# print_color_same_line "RSTUDIO_IMAGE" 95
-# print_color_same_line " set to " 96
-# print_color_same_line "$new_rstudio_image" 33
-# print_color_same_line " in $RSTUDIO_CONFIG_FILE_DIR" 96
-# print_color_same_line "\n" 97
-# echo
 
+# Print the updated variables
 grep 'RSTUDIO_IMAGE' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
     print_color_same_line "   " 97
     print_color_same_line "✓ " 32
@@ -195,19 +222,33 @@ done
 print_color_same_line "\n" 97
 sleep 1
 
+
 # RSTUDIO_TAG
 #-------------------------------------------------------------
+
 # Print the variable information
-print_color_same_line ">> " 97
+print_color_same_line "\n" 97
+print_color_same_line "(2/5) " 97
 print_color_same_line "RSTUDIO_TAG" 32
 print_color_same_line " is the tag of the Rocker Project docker image." 37
 print_color_same_line "\n" 97
 echo
 
-
-
 # Extract the current variable value
 current_rstudio_tag=$(awk -F"[[:space:]]*=[[:space:]]*" '/RSTUDIO_TAG[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$RSTUDIO_CONFIG_FILE_DIR")
+
+# Print the current variable value
+print_color_same_line "   " 97
+print_color_same_line "Current RSTUDIO_TAG is: " 36
+if [[ -z "$current_rstudio_tag" ]]; then
+    current_rstudio_tag="\"\""
+    print_color_same_line "empty" 90
+    print_color_same_line "\n" 97
+else
+    print_color_same_line "$current_rstudio_tag" 33
+    print_color_same_line "\n" 97
+fi
+echo
 
 # Define options
 RSTUDIO_TAG_COLORED_OPTIONS=()
@@ -251,6 +292,7 @@ while true; do
         break
     fi
 
+    # Check if the input is a valid number
     if [[ "$selection" =~ ^[0-9]+$ ]] && (( selection >= 1 && selection <= ${#RSTUDIO_TAG_OPTIONS[@]} )); then
         new_rstudio_tag="${RSTUDIO_TAG_OPTIONS[$((selection-1))]}"
         break
@@ -267,6 +309,7 @@ AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_TAG[ =]*/ {print \"export RSTUDI
 awk -v new_rstudio_tag="$new_rstudio_tag" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
 print_color_same_line "\n" 97
 
+# Print the updated variables
 grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
     print_color_same_line "   " 97
     print_color_same_line "✓ " 32
@@ -276,18 +319,20 @@ done
 print_color_same_line "\n" 97
 sleep 1
 
+
 # R_LIBS_USER
 #-------------------------------------------------------------
-# If new_rstudio_image contains 'rocker', set R_LIBS_USER to /cluster/work/nme/software/libraries/R/rocker/$new_rstudio_tag
-# Otherwise, set R_LIBS_USER to /cluster/work/nme/software/libraries/R/$new_rstudio_tag
+
+# If new_rstudio_image contains 'rocker'
 if [[ "$new_rstudio_image" == *"rocker"* ]]; then
-    R_LIBS_USER="/cluster/work/nme/software/libraries/R/rocker/$new_rstudio_tag"
+    R_LIBS_USER="$R_LIBS_USER_BASE/rocker/$new_rstudio_tag"
 else
-    R_LIBS_USER="/cluster/work/nme/software/libraries/R/$new_rstudio_tag"
+    R_LIBS_USER="$R_LIBS_USER_BASE/$new_rstudio_tag"
 fi
 
 # Print the variable information
-print_color_same_line ">> " 97
+print_color_same_line "\n" 97
+print_color_same_line "(3/5) " 97
 print_color_same_line "R_LIBS_USER" 32
 print_color_same_line " is the path to the user's R library." 37
 print_color_same_line "\n" 97
@@ -296,30 +341,46 @@ echo
 # Extract the current variable value
 current_r_libs_user=$(awk -F"[[:space:]]*=[[:space:]]*" '/R_LIBS_USER[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$RSTUDIO_CONFIG_FILE_DIR")
 
+# Print the suggested library path
 print_color_same_line "   " 97
 print_color_same_line "Suggested path:" 90
 print_color_same_line "\n" 97
 print_color_same_line "   " 97
 print_color_same_line "$R_LIBS_USER" 33
-print_color_same_line "\n" 97
 echo
 
-# Prompt user for input
-print_color_same_line "   " 97
-print_color_same_line "Press " 36
-print_color_same_line "ENTER" 97
-print_color_same_line " to confirm or write the path to the user's R library: " 36
-
+# Prompt user for decision
 while true; do
-    read -r new_r_libs_user
-    if [[ -z "$new_r_libs_user" ]]; then
+    print_color_same_line "\n" 97
+    print_color_same_line "   " 97
+    print_color_same_line "Do you accept the suggested path? (" 36
+    print_color_same_line "ENTER" 97
+    print_color_same_line " to accept, '" 36
+    print_color_same_line "n" 97
+    print_color_same_line "' to reject): " 36
+    read -r user_decision
+    if [[ -z "$user_decision" ]]; then
         new_r_libs_user=$R_LIBS_USER
-        break # Exit the loop if the input is empty and R_LIBS_USER is used
-    elif [[ ! -d "$new_r_libs_user" ]]; then
-        echo "The input is not a directory. Please enter a valid directory."
-        # The loop continues, prompting the user again
+        break
+    elif [[ "$user_decision" == "n" ]]; then
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+        print_color_same_line "export R_LIBS_USER=" 36
+        read -r new_r_libs_user
+        if [[ -z "$new_r_libs_user" ]]; then
+            new_r_libs_user="\"\""
+            break
+        fi
+        break
     else
-        break # Exit the loop if a valid directory is entered
+        print_color_same_line "   " 97
+        print_color_same_line "Invalid option. Please press '" 95
+        print_color_same_line "ENTER" 97
+        print_color_same_line "' to accept or '" 95
+        print_color_same_line "n" 97
+        print_color_same_line "' to reject." 95
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
     fi
 done
 
@@ -329,7 +390,151 @@ AWK_COMMAND="BEGIN{found=0} /^(export )?R_LIBS_USER[ =]*/ {print \"export R_LIBS
 awk -v new_r_libs_user="$new_r_libs_user" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
 print_color_same_line "\n" 97
 
+# Print the updated variables
 grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
+    print_color_same_line "   " 97
+    print_color_same_line "✓ " 32
+    print_color_same_line "$line" 90
+    print_color_same_line "\n" 97
+done
+print_color_same_line "\n" 97
+
+# Check if $HOME/.Renviron exists to avoid conflicts
+if [ -f "$HOME/.Renviron" ]; then
+    # Extract the R_LIBS_USER value from $HOME/.Renviron
+    renviron_r_libs_user=$(awk -F"[[:space:]]*=[[:space:]]*" '/R_LIBS_USER[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$HOME/.Renviron")
+
+    # Compare the extracted value with current_r_libs_user
+    if [[ -n "$renviron_r_libs_user" && "$renviron_r_libs_user" != "$current_r_libs_user" ]]; then
+
+        # If the values are different and the .Renviron value is not empty, warn the user
+        print_color_same_line "   " 97
+        print_color_same_line "Warning:" 31
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+        print_color_same_line "The " 97
+        print_color_same_line "R_LIBS_USER" 90
+        print_color_same_line " value in $HOME/.Renviron (" 97
+        print_color_same_line "$renviron_r_libs_user" 33
+        print_color_same_line ") differs from the current setting (" 97
+        print_color_same_line "$current_r_libs_user" 33
+        print_color_same_line ")." 97
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+        print_color_same_line "Having different " 97
+        print_color_same_line "R_LIBS_USER" 90
+        print_color_same_line " values " 97
+        print_color_same_line "can lead to conflicts." 31
+        print_color_same_line "\n" 97
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+        
+        # Define prompt message
+        prompt_message=$'\e[36mDo you want to delete the R_LIBS_USER variable in '"${HOME}"'/.Renviron to avoid conflicts? (y/n): '
+
+        # Prompt user for decision
+        while true; do
+            read -p "$prompt_message" user_decision
+
+            if [[ "$user_decision" == "y" ]]; then
+                sed -i '' '/R_LIBS_USER/d' "$HOME/.Renviron"
+                print_color_same_line "\n" 97
+                print_color_same_line "   " 97
+                print_color_same_line "✓ " 32
+                print_color_same_line "R_LIBS_USER variable has been deleted from $HOME/.Renviron." 32
+                print_color_same_line "\n" 97
+                break
+            elif [[ "$user_decision" == "n" ]]; then
+                print_color_same_line "\n" 97
+                print_color_same_line "   " 97
+                print_color_same_line "No changes made to $HOME/.Renviron." 90
+                print_color_same_line "\n" 97
+                break
+            else
+                print_color_same_line "   " 97
+                print_color_same_line "Invalid option. Please press '" 95
+                print_color_same_line "y" 97
+                print_color_same_line "' to confirm or '" 95
+                print_color_same_line "n" 97
+                print_color_same_line "' to cancel." 95
+                print_color_same_line "\n" 97
+                print_color_same_line "\n" 97
+                print_color_same_line "   " 97
+            fi
+        done
+    fi
+fi
+sleep 1
+
+# RSTUDIO_EXTRA_PARAMS
+#-------------------------------------------------------------
+
+# Print the variable information
+print_color_same_line "\n" 97
+print_color_same_line "(4/5) " 97
+print_color_same_line "RSTUDIO_EXTRA_PARAMS" 32
+print_color_same_line " is the extra parameters to be passed to the RStudio container." 37
+print_color_same_line "\n" 97
+echo
+
+# Extract the current variable value
+current_rstudio_extra_params=$(awk -F"[[:space:]]*=[[:space:]]*" '/RSTUDIO_EXTRA_PARAMS[[:space:]]*=[[:space:]]*/ {gsub(/"/, "", $2); print $2; exit}' "$RSTUDIO_CONFIG_FILE_DIR")
+
+# Print the current variable value
+print_color_same_line "   " 97
+print_color_same_line "Current RSTUDIO_EXTRA_PARAMS is: " 36
+if [[ -z "$current_rstudio_extra_params" ]]; then
+    current_rstudio_extra_params="\"\""
+    print_color_same_line "empty" 90
+    print_color_same_line "\n" 97
+else
+    print_color_same_line "$current_rstudio_extra_params" 33
+    print_color_same_line "\n" 97
+fi
+echo
+
+# Prompt user for decision
+while true; do
+    print_color_same_line "   " 97
+    print_color_same_line "Do you want to keep the current value? (" 36
+    print_color_same_line "ENTER" 97
+    print_color_same_line " to accept, '" 36
+    print_color_same_line "n" 97
+    print_color_same_line "' to reject): " 36
+    read -r user_decision
+    if [[ -z "$user_decision" ]]; then
+        new_rstudio_extra_params=$current_rstudio_extra_params
+        break
+    elif [[ "$user_decision" == "n" ]]; then
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+        print_color_same_line "export RSTUDIO_EXTRA_PARAMS=" 36
+        read -r new_rstudio_extra_params
+        if [[ -z "$new_rstudio_extra_params" ]]; then
+            new_rstudio_extra_params="\"\""
+            break
+        fi
+        break
+    else
+        print_color_same_line "   " 97
+        print_color_same_line "Invalid option. Please press '" 95
+        print_color_same_line "ENTER" 97
+        print_color_same_line "' to accept or '" 95
+        print_color_same_line "n" 97
+        print_color_same_line "' to reject." 95
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+    fi
+done
+
+# Replace variable in the file
+new_rstudio_extra_params=${new_rstudio_extra_params:-$RSTUDIO_EXTRA_PARAMS}
+AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_EXTRA_PARAMS[ =]*/ {print \"export RSTUDIO_EXTRA_PARAMS=\\\"$new_rstudio_extra_params\\\"\"; found=1; next} {print} END{if(!found) print \"export RSTUDIO_EXTRA_PARAMS=\\\"$new_rstudio_extra_params\\\"\"}"
+awk -v new_rstudio_extra_params="$new_rstudio_extra_params" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
+print_color_same_line "\n" 97
+
+# Print the updated variables
+grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER|RSTUDIO_EXTRA_PARAMS' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
     print_color_same_line "   " 97
     print_color_same_line "✓ " 32
     print_color_same_line "$line" 90
@@ -338,29 +543,97 @@ done
 print_color_same_line "\n" 97
 sleep 1
 
-# Check if $HOME/.Renviron exists
-if [ -f "$HOME/.Renviron" ]; then
-    # Extract the R_LIBS_USER value from $HOME/.Renviron
-    renviron_r_libs_user=$(awk -F"[[:space:]]*=[[:space:]]*" '/R_LIBS_USER[[:space:]]*=[[:space:]]*/ {print $2; exit}' "$HOME/.Renviron")
+# RSTUDIO_SINGULARITY_EXTRA_PARAMS
+#-------------------------------------------------------------
 
-    # Compare the extracted value with current_r_libs_user
-    if [[ -n "$renviron_r_libs_user" && "$renviron_r_libs_user" != "$current_r_libs_user" ]]; then
-        # If the values are different and the .Renviron value is not empty, warn the user
-        echo "Warning: The R_LIBS_USER value in .Renviron ($renviron_r_libs_user) differs from the current setting ($current_r_libs_user)."
-        echo "Having different R_LIBS_USER values can lead to conflicts."
-        read -p "Do you want to delete the R_LIBS_USER variable in .Renviron to avoid conflicts? (y/n): " user_decision
-        
-        if [[ "$user_decision" == "y" ]]; then
-            # If the user agrees, delete the R_LIBS_USER line from .Renviron
-            sed -i '' '/R_LIBS_USER/d' "$HOME/.Renviron"
-            echo "R_LIBS_USER variable has been deleted from .Renviron."
-        else
-            echo "No changes made to .Renviron."
-        fi
-    fi
+# Print the variable information
+print_color_same_line "\n" 97
+print_color_same_line "(5/5) " 97
+print_color_same_line "RSTUDIO_SINGULARITY_EXTRA_PARAMS" 32
+print_color_same_line " is the extra parameters to be passed to the RStudio container when using Singularity." 37
+print_color_same_line "\n" 97
+echo
+
+# Extract the current variable value
+current_rstudio_singularity_extra_params=$(awk -F"[[:space:]]*=[[:space:]]*" '/RSTUDIO_SINGULARITY_EXTRA_PARAMS[[:space:]]*=[[:space:]]*/ {gsub(/"/, "", $2); print $2; exit}' "$RSTUDIO_CONFIG_FILE_DIR")
+
+# Print the current variable value
+print_color_same_line "   " 97
+print_color_same_line "Current RSTUDIO_SINGULARITY_EXTRA_PARAMS is: " 36
+if [[ -z "$current_rstudio_singularity_extra_params" ]]; then
+    current_rstudio_singularity_extra_params="\"\""
+    print_color_same_line "empty" 90
+    print_color_same_line "\n" 97
+else
+    print_color_same_line "$current_rstudio_singularity_extra_params" 33
+    print_color_same_line "\n" 97
 fi
+echo
 
-# Run rstudio_log_level_set.sh to set the log-level in RStudio's logging configuration file
-bash rstudio_log_level
+# Print the suggested singularity extra parameters
+print_color_same_line "   " 97
+print_color_same_line "Suggested singularity extra parameters:" 90
+print_color_same_line "\n" 97
+print_color_same_line "   " 97
+print_color_same_line "$RSTUDIO_SINGULARITY_EXTRA_PARAMS" 33
+echo
+
+# Prompt user for decision
+while true; do
+    print_color_same_line "\n" 97
+    print_color_same_line "   " 97
+    print_color_same_line "Do you accept the suggested value? (" 36
+    print_color_same_line "ENTER" 97
+    print_color_same_line " to accept, '" 36
+    print_color_same_line "n" 97
+    print_color_same_line "' to reject): " 36
+    read -r user_decision
+    if [[ -z "$user_decision" ]]; then
+        new_rstudio_singularity_extra_params=$RSTUDIO_SINGULARITY_EXTRA_PARAMS
+        break
+    elif [[ "$user_decision" == "n" ]]; then
+        print_color_same_line "   " 97
+        print_color_same_line "Write '" 36
+        print_color_same_line "0" 97
+        print_color_same_line "' to keep the current value or write the new singularity extra parameters: " 36
+        read -r new_rstudio_singularity_extra_params
+        if [[ "$new_rstudio_singularity_extra_params" == 0 ]]; then
+            new_rstudio_singularity_extra_params=$current_rstudio_singularity_extra_params
+            break
+        elif [[ -z "$new_rstudio_singularity_extra_params" ]]; then
+            new_rstudio_singularity_extra_params="\"\""
+            break
+        fi
+        break
+    else
+        print_color_same_line "   " 97
+        print_color_same_line "Invalid option. Please press '" 95
+        print_color_same_line "ENTER" 97
+        print_color_same_line "' to accept or '" 95
+        print_color_same_line "n" 97
+        print_color_same_line "' to reject." 95
+        print_color_same_line "\n" 97
+        print_color_same_line "   " 97
+    fi
+done
+
+# Replace variable in the file
+new_rstudio_singularity_extra_params=${new_rstudio_singularity_extra_params:-$RSTUDIO_SINGULARITY_EXTRA_PARAMS}
+AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_SINGULARITY_EXTRA_PARAMS[ =]*/ {print \"export RSTUDIO_SINGULARITY_EXTRA_PARAMS=\\\"$new_rstudio_singularity_extra_params\\\"\"; found=1; next} {print} END{if(!found) print \"export RSTUDIO_SINGULARITY_EXTRA_PARAMS=\\\"$new_rstudio_singularity_extra_params\\\"\"}"
+awk -v new_rstudio_singularity_extra_params="$new_rstudio_singularity_extra_params" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
+print_color_same_line "\n" 97
+
+# Print the updated variables
+grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER|RSTUDIO_EXTRA_PARAMS|RSTUDIO_SINGULARITY_EXTRA_PARAMS' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
+    print_color_same_line "   " 97
+    print_color_same_line "✓ " 32
+    print_color_same_line "$line" 90
+    print_color_same_line "\n" 97
+done
+print_color_same_line "\n" 97
+sleep 1
+print_color_same_line "   " 97
+print_color_same_line "All set!" 32
+print_color_same_line "\n" 97
 
 exit 0
