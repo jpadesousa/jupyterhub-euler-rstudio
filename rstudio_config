@@ -639,8 +639,17 @@ AWK_COMMAND="BEGIN{found=0} /^(export )?RSTUDIO_SINGULARITY_EXTRA_PARAMS[ =]*/ {
 awk -v new_rstudio_singularity_extra_params="$new_rstudio_singularity_extra_params" "$AWK_COMMAND" "$RSTUDIO_CONFIG_FILE_DIR" > temp_file && mv temp_file "$RSTUDIO_CONFIG_FILE_DIR"
 print_color_same_line "\n" 97
 
+# APPTAINER_CACHEDIR
+#-------------------------------------------------------------
+# Add the apptainer/singularity cache directory
+## This is to have the same directory as in the Jupyterhub rstudio script
+grep -qxF "export APPTAINER_CACHEDIR=${APPTAINER_CACHEDIR}" "$RSTUDIO_CONFIG_FILE_DIR" || echo -e "export APPTAINER_CACHEDIR=${APPTAINER_CACHEDIR}" >> "$RSTUDIO_CONFIG_FILE_DIR"
+grep -qxF "export SINGULARITY_CACHEDIR=\$APPTAINER_CACHEDIR" "$RSTUDIO_CONFIG_FILE_DIR" || echo -e "export SINGULARITY_CACHEDIR=\$APPTAINER_CACHEDIR" >> "$RSTUDIO_CONFIG_FILE_DIR"
+
+# End message
+#-------------------------------------------------------------
 # Print the updated variables
-grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER|RSTUDIO_EXTRA_PARAMS|RSTUDIO_SINGULARITY_EXTRA_PARAMS' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
+grep -E 'RSTUDIO_IMAGE|RSTUDIO_TAG|R_LIBS_USER|RSTUDIO_EXTRA_PARAMS|RSTUDIO_SINGULARITY_EXTRA_PARAMS|APPTAINER_CACHEDIR' "$RSTUDIO_CONFIG_FILE_DIR" | while read -r line; do
     print_color_same_line "   " 97
     print_color_same_line "✓ " 32
     print_color_same_line "$line" 90
